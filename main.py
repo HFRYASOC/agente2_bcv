@@ -6,39 +6,36 @@ from datetime import datetime
 import smtplib
 from email.message import EmailMessage
 
-# — Configuración vía Secrets de Replit
-URL                 = os.environ.get("BCV_URL",       "https://www.bcv.org.ve/")
-EXCEL_PATH          = os.environ.get("EXCEL_PATH",  "data/tasa_bcv.xlsx")
-DESTINATARIOS_PATH  = "data/destinatarios.xlsx"
+# — Variables desde GitHub Secrets
+URL = os.environ.get("BCV_URL", "https://www.bcv.org.ve/")
+EXCEL_PATH = os.path.join("data", "tasa_bcv.xlsx")
+DESTINATARIOS_PATH = os.path.join("data", "destinatarios.xlsx")
 
-TELEGRAM_TOKEN      = os.environ["TELEGRAM_TOKEN"]
-TELEGRAM_CHAT_ID    = os.environ["TELEGRAM_CHAT_ID"]
-
-SMTP_HOST           = os.environ.get("SMTP_HOST",    "smtp.gmail.com").strip()
-SMTP_PORT           = int(os.environ.get("SMTP_PORT", 587))
-EMAIL_ORIGEN        = os.environ["EMAIL_ORIGEN"].strip()
-EMAIL_PASS          = os.environ["EMAIL_PASS"].strip()
+TELEGRAM_TOKEN = os.environ["TELEGRAM_TOKEN"]
+TELEGRAM_CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]
+SMTP_HOST = os.environ.get("SMTP_HOST", "smtp.gmail.com")
+SMTP_PORT = int(os.environ.get("SMTP_PORT", 587))
+EMAIL_ORIGEN = os.environ["EMAIL_ORIGEN"]
+EMAIL_PASS = os.environ["EMAIL_PASS"]
 
 def enviar_telegram(mensaje):
     print("📡 Enviando Telegram...")
-    url     = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
     payload = {"chat_id": TELEGRAM_CHAT_ID, "text": mensaje}
-    resp    = requests.post(url, data=payload)
+    resp = requests.post(url, data=payload)
     if resp.status_code == 200:
         print("✅ Telegram enviado.")
     else:
         print(f"❌ Error Telegram: {resp.status_code}")
 
 def obtener_datos_bcv():
-    resp = requests.get(URL, timeout=10, verify=False)
-    print("⚠️ Conexión SSL no verificada (solo pruebas)")
+    resp = requests.get(URL, timeout=10)
     resp.raise_for_status()
-    soup  = BeautifulSoup(resp.text, "html.parser")
-    dolar = soup.select_one("div#dolar div.centrado strong")
-    tasa  = float(dolar.text.strip().replace(",", "."))
-    span  = soup.select_one("span.date-display-single")
-    fecha = span["content"][:10]
-    return fecha, tasa
+    soup = BeautifulSoup(resp.text, "html.parser")
+    tasa_str = soup.select_one("div#dolar div.centrado strong").text.strip()
+    fecha_str = soup.select_one("span.date-display-single")["content"][:10]
+    tasa = float(tasa_str.replace(",", "."))
+    return fecha_str, tasa
 
 def guardar_en_excel(fecha, tasa):
     consulta = datetime.now().strftime("%Y-%m-%d")
@@ -48,39 +45,38 @@ def guardar_en_excel(fecha, tasa):
     if os.path.exists(EXCEL_PATH):
         df = pd.read_excel(EXCEL_PATH)
         if fecha in df["Fecha BCV"].astype(str).values:
-            print(f"⚠️ Ya hay registro para {fecha}.")
+            print(f"⚠️ Ya existe registro para {fecha}.")
             return False
         df = pd.concat([df, pd.DataFrame([fila])], ignore_index=True)
-        df.to_excel(EXCEL_PATH, index=False)
-        print(f"✅ Tasa agregada: {fecha}.")
-        return True
     else:
-        pd.DataFrame([fila]).to_excel(EXCEL_PATH, index=False)
-        print(f"🆕 Excel creado con {fecha}.")
-        return True
+        df = pd.DataFrame([fila])
+
+    df.to_excel(EXCEL_PATH, index=False)
+    print(f"✅ Registro guardado para {fecha}.")
+    return True
 
 def enviar_email_excel(fecha, tasa):
-    print("📧 Enviando correos electrónicos...")
+    print("📧 Enviando correos...")
     df = pd.read_excel(DESTINATARIOS_PATH)
 
     for _, fila in df.iterrows():
-        destino  = fila["email destino"]
-        nombre   = fila["nombre destinatario"]
+        destino = fila["email destino"]
+        nombre = fila["nombre destinatario"]
         telefono = fila["texto con telefono para comentarios"]
 
         msg = EmailMessage()
         msg["Subject"] = f"Tasa BCV del {fecha}"
-        msg["From"]    = EMAIL_ORIGEN
-        msg["To"]      = destino
+        msg["From"] = EMAIL_ORIGEN
+        msg["To"] = destino
 
         cuerpo = f"""\
 Apreciad@ {nombre},
 
-Anexo la última tasa de $ descargada del BCV para la fecha {fecha}.
+Anexo la tasa oficial de $ publicada por el BCV para la fecha {fecha}.
 
 Tasa oficial: Bs {tasa:.4f}
 
-En caso de algún comentario, favor contactarme por {telefono}.
+Cualquier comentario, puedes escribirme al {telefono}.
 
 Saludos cordiales,
 Hans
@@ -94,7 +90,7 @@ Hans
                 server.send_message(msg)
             print(f"✅ Email enviado a {destino}")
         except Exception as e:
-            print(f"❌ Error enviando a {destino}: {e}")
+            print(f"❌ Error con {destino}: {e}")
 
 def main():
     print(">>> Iniciando agente BCV <<<")
@@ -104,7 +100,7 @@ def main():
             enviar_telegram(f"Tasa BCV del {fecha}: Bs {tasa}")
             enviar_email_excel(fecha, tasa)
     except Exception as e:
-        print(f"❌ Error: {e}")
+        print(f"❌ Error general: {e}")
 
 if __name__ == "__main__":
     main()
