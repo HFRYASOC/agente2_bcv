@@ -14,19 +14,6 @@
       certifi_path.txt
       certifi_bundle.txt
 
-
-
-
-
-
-
-
-
-
-
-
-
-
 name: Agente BCV diario (debuggable)
 
 concurrency:
