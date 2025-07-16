@@ -78,12 +78,8 @@ def enviar_email_excel(fecha, tasa):
         cuerpo = f"""\
 Apreciad@ {nombre},
 
-Anexo la tasa oficial de $ publicada por el BCV para la fecha {fecha}.
-
-Tasa oficial: Bs {tasa:.4f}
-
+La tasa BCV oficial del $ es Bs {tasa:.4f}el {fecha}.
 Cualquier comentario, puedes escribirme al {telefono}.
-
 Saludos cordiales,
 Hans
 """
