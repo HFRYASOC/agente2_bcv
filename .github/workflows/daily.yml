@@ -49,8 +49,8 @@ jobs:
       - name: Subir debug logs
         uses: actions/upload-artifact@v4
         with:
-        name: debug-logs
-        path: |
-      **/home/runner/**
-
+          name: debug-logs
+          path: home/runner/**
+          path: |
+            **/home/runner/**
 
