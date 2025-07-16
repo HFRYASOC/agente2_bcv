@@ -46,3 +46,11 @@ jobs:
         with:
           name: tasa_bcv_excel
           path: data/tasa_bcv.xlsx
+      - name: Subir debug logs
+        uses: actions/upload-artifact@v4
+        with:
+        name: debug-logs
+        path: |
+      **/home/runner/**
+
+
