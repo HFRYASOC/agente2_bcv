@@ -6,6 +6,7 @@ from datetime import datetime
 import smtplib
 from email.message import EmailMessage
 import urllib3
+
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 URL = os.environ.get("BCV_URL", "https://www.bcv.org.ve/")
@@ -18,6 +19,7 @@ SMTP_HOST = os.environ.get("SMTP_HOST", "smtp.gmail.com")
 SMTP_PORT = int(os.environ.get("SMTP_PORT", 587))
 EMAIL_ORIGEN = os.environ["EMAIL_ORIGEN"]
 EMAIL_PASS = os.environ["EMAIL_PASS"]
+
 
 def enviar_telegram(mensaje):
     print("📡 Enviando Telegram...")
@@ -34,6 +36,7 @@ def enviar_telegram(mensaje):
     except Exception as e:
         print(f"❌ Telegram fallo: {e}")
 
+
 def obtener_datos_bcv():
     resp = requests.get(URL, timeout=10, verify=False)
     resp.raise_for_status()
@@ -42,6 +45,7 @@ def obtener_datos_bcv():
     fecha_str = soup.select_one("span.date-display-single")["content"][:10]
     tasa = float(tasa_str.replace(",", "."))
     return fecha_str, tasa
+
 
 def guardar_en_excel(fecha, tasa):
     consulta = datetime.now().strftime("%Y-%m-%d")
@@ -61,8 +65,18 @@ def guardar_en_excel(fecha, tasa):
     print(f"✅ Registro guardado para {fecha}.")
     return True
 
+
 def enviar_email_excel(fecha, tasa):
     print("📧 Enviando correos...")
+    # Convertir fecha 'YYYY-MM-DD' a 'D de mes de YYYY'
+    año, mes, día = fecha.split("-")
+    meses = {
+        "01": "enero", "02": "febrero", "03": "marzo", "04": "abril",
+        "05": "mayo", "06": "junio", "07": "julio", "08": "agosto",
+        "09": "septiembre", "10": "octubre", "11": "noviembre", "12": "diciembre"
+    }
+    fecha_legible = f"{int(día)} de {meses[mes]} de {año}"
+
     df = pd.read_excel(DESTINATARIOS_PATH)
 
     for _, fila in df.iterrows():
@@ -71,15 +85,16 @@ def enviar_email_excel(fecha, tasa):
         telefono = fila["texto con telefono para comentarios"]
 
         msg = EmailMessage()
-        msg["Subject"] = f"Tasa BCV del {fecha}"
+        msg["Subject"] = f"Tasa BCV del {fecha_legible}"
         msg["From"] = EMAIL_ORIGEN
         msg["To"] = destino
 
         cuerpo = f"""\
 Apreciad@ {nombre},
 
-La tasa BCV oficial del $ es Bs {tasa:.4f}el {fecha}.
+La tasa BCV oficial del $ es Bs {tasa:.4f} el {fecha_legible}.
 Cualquier comentario, puedes escribirme al {telefono}.
+
 Saludos cordiales,
 Hans
 """
@@ -94,22 +109,35 @@ Hans
         except Exception as e:
             print(f"❌ Error con {destino}: {e}")
 
+
 def main():
     print(">>> Iniciando agente BCV <<<")
     try:
         fecha, tasa = obtener_datos_bcv()
         nuevo = guardar_en_excel(fecha, tasa)
 
-        mensaje = f"Tasa BCV del {fecha}: Bs {tasa:.4f}"
+        # Formatear fecha para Telegram
+        año, mes, día = fecha.split("-")
+        meses = {
+            "01": "enero", "02": "febrero", "03": "marzo", "04": "abril",
+            "05": "mayo", "06": "junio", "07": "julio", "08": "agosto",
+            "09": "septiembre", "10": "octubre", "11": "noviembre", "12": "diciembre"
+        }
+        fecha_legible = f"{int(día)} de {meses[mes]} de {año}"
+
+        mensaje = f"Tasa BCV del {fecha_legible}: Bs {tasa:.4f}"
         if not nuevo:
             mensaje = "🔄 (Ya registrado) " + mensaje
         enviar_telegram(mensaje)
 
         if nuevo:
             enviar_email_excel(fecha, tasa)
+
     except Exception as e:
         print(f"❌ Error general: {e}")
         enviar_telegram(f"🚨 Error agente BCV: {e}")
 
+
 if __name__ == "__main__":
     main()
+```
