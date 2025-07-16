@@ -1,3 +1,6 @@
+concurrency:
+  group: ${{ github.workflow }}       # mismo nombre de workflow → mismo grupo
+  cancel-in-progress: true            # cancela corridas anteriores
 name: Agente BCV diario
 
 on:
