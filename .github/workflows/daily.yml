@@ -32,7 +32,7 @@ jobs:
         run: python main.py
 
       - name: Subir Excel como artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: tasa_bcv_excel
           path: data/tasa_bcv.xlsx
