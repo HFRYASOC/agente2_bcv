@@ -51,6 +51,3 @@ jobs:
         with:
           name: debug-logs
           path: home/runner/**
-          path: |
-            **/home/runner/**
-
