@@ -1,11 +1,12 @@
-concurrency:
-  group: ${{ github.workflow }}       # mismo nombre de workflow → mismo grupo
-  cancel-in-progress: true            # cancela corridas anteriores
 name: Agente BCV diario
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: true
 
 on:
   schedule:
-    - cron: '0 13 * * *'
+    - cron: '0 13 * * *'   # 13:00 UTC → 09:00 Venezuela
   workflow_dispatch:
 
 jobs:
@@ -38,4 +39,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: tasa_bcv_excel
-          path: data/tasa_bcv.xlsx
+          path: data/taxa_bcv.xlsx
