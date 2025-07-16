@@ -1,20 +1,4 @@
-- name: Listar certificados raíz
-  run: |
-    echo "Certificados disponibles en sistema:"
-    ls /etc/ssl/certs > certificados_root.txt
-    echo "Cadena actual usada por certifi:"
-    python -m certifi > certifi_path.txt
-    cat $(python -m certifi) > certifi_bundle.txt
-- name: Subir certificados como artifact
-  uses: actions/upload-artifact@v4
-  with:
-    name: certificados-debug
-    path: |
-      certificados_root.txt
-      certifi_path.txt
-      certifi_bundle.txt
-
-name: Agente BCV diario (debuggable)
+name: Agente BCV diario
 
 concurrency:
   group: ${{ github.workflow }}
@@ -56,6 +40,9 @@ jobs:
 
       - name: Instalar dependencias
         run: pip install requests beautifulsoup4 pandas openpyxl
+
+      - name: Borrar Excel previo (para debug)
+        run: rm -f data/tasa_bcv.xlsx
 
       - name: Capturar estructura de carpetas
         run: ls -R . > debug_workspace.txt
