@@ -1,4 +1,4 @@
-name: Agente BCV diario
+name: Agente BCV diario (debuggable)
 
 concurrency:
   group: ${{ github.workflow }}
@@ -13,13 +13,15 @@ jobs:
   ejecutar-agente:
     runs-on: ubuntu-latest
     env:
-      BCV_URL:        ${{ secrets.BCV_URL }}
-      TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
-      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-      SMTP_HOST:      ${{ secrets.SMTP_HOST }}
-      SMTP_PORT:      ${{ secrets.SMTP_PORT }}
-      EMAIL_ORIGEN:   ${{ secrets.EMAIL_ORIGEN }}
-      EMAIL_PASS:     ${{ secrets.EMAIL_PASS }}
+      BCV_URL:               ${{ secrets.BCV_URL }}
+      TELEGRAM_TOKEN:        ${{ secrets.TELEGRAM_TOKEN }}
+      TELEGRAM_CHAT_ID:      ${{ secrets.TELEGRAM_CHAT_ID }}
+      SMTP_HOST:             ${{ secrets.SMTP_HOST }}
+      SMTP_PORT:             ${{ secrets.SMTP_PORT }}
+      EMAIL_ORIGEN:          ${{ secrets.EMAIL_ORIGEN }}
+      EMAIL_PASS:            ${{ secrets.EMAIL_PASS }}
+      ACTIONS_RUNNER_DEBUG:  ${{ secrets.ACTIONS_RUNNER_DEBUG }}
+      ACTIONS_STEP_DEBUG:    ${{ secrets.ACTIONS_STEP_DEBUG }}
 
     steps:
       - name: Checkout código
@@ -39,11 +41,26 @@ jobs:
       - name: Instalar dependencias
         run: pip install requests beautifulsoup4 pandas openpyxl
 
-      - name: Ejecutar main.py
-        run: python main.py
+      - name: Capturar estructura de carpetas
+        run: ls -R . > debug_workspace.txt
+
+      - name: Capturar variables de entorno
+        run: env | sort > debug_env.txt
+
+      - name: Ejecutar main.py y guardar log
+        run: python main.py 2>&1 | tee debug_script.log
 
       - name: Subir Excel como artifact
         uses: actions/upload-artifact@v4
         with:
           name: tasa_bcv_excel
           path: data/tasa_bcv.xlsx
+
+      - name: Subir archivos de debug
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug-files
+          path: |
+            debug_workspace.txt
+            debug_env.txt
+            debug_script.log
