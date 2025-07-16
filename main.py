@@ -5,8 +5,9 @@ import pandas as pd
 from datetime import datetime
 import smtplib
 from email.message import EmailMessage
+import urllib3
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-# — Variables desde GitHub Secrets
 URL = os.environ.get("BCV_URL", "https://www.bcv.org.ve/")
 EXCEL_PATH = os.path.join("data", "tasa_bcv.xlsx")
 DESTINATARIOS_PATH = os.path.join("data", "destinatarios.xlsx")
@@ -22,14 +23,19 @@ def enviar_telegram(mensaje):
     print("📡 Enviando Telegram...")
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
     payload = {"chat_id": TELEGRAM_CHAT_ID, "text": mensaje}
-    resp = requests.post(url, data=payload)
-    if resp.status_code == 200:
-        print("✅ Telegram enviado.")
-    else:
-        print(f"❌ Error Telegram: {resp.status_code}")
+    try:
+        resp = requests.post(url, data=payload, timeout=10)
+        print("→ Status:", resp.status_code)
+        print("→ Body:", resp.text)
+        if resp.ok:
+            print("✅ Telegram enviado.")
+        else:
+            print("❌ Error Telegram")
+    except Exception as e:
+        print(f"❌ Telegram fallo: {e}")
 
 def obtener_datos_bcv():
-    resp = requests.get(URL, timeout=10)
+    resp = requests.get(URL, timeout=10, verify=False)
     resp.raise_for_status()
     soup = BeautifulSoup(resp.text, "html.parser")
     tasa_str = soup.select_one("div#dolar div.centrado strong").text.strip()
@@ -96,11 +102,18 @@ def main():
     print(">>> Iniciando agente BCV <<<")
     try:
         fecha, tasa = obtener_datos_bcv()
-        if guardar_en_excel(fecha, tasa):
-            enviar_telegram(f"Tasa BCV del {fecha}: Bs {tasa}")
+        nuevo = guardar_en_excel(fecha, tasa)
+
+        mensaje = f"Tasa BCV del {fecha}: Bs {tasa:.4f}"
+        if not nuevo:
+            mensaje = "🔄 (Ya registrado) " + mensaje
+        enviar_telegram(mensaje)
+
+        if nuevo:
             enviar_email_excel(fecha, tasa)
     except Exception as e:
         print(f"❌ Error general: {e}")
+        enviar_telegram(f"🚨 Error agente BCV: {e}")
 
 if __name__ == "__main__":
     main()
