@@ -1,31 +1,40 @@
-name: Agente BCV diario (debug-files)
+name: Agente BCV diario
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: true
 
 on:
+  schedule:
+    - cron: '0 13 * * *'   # 13:00 UTC → 09:00 Venezuela
   workflow_dispatch:
 
 jobs:
-  debug-runner:
+  ejecutar-agente:
     runs-on: ubuntu-latest
     env:
-      ACTIONS_RUNNER_DEBUG: ${{ secrets.ACTIONS_RUNNER_DEBUG }}
-      ACTIONS_STEP_DEBUG:   ${{ secrets.ACTIONS_STEP_DEBUG }}
-      BCV_URL:              ${{ secrets.BCV_URL }}
-      TELEGRAM_TOKEN:       ${{ secrets.TELEGRAM_TOKEN }}
-      TELEGRAM_CHAT_ID:     ${{ secrets.TELEGRAM_CHAT_ID }}
-      SMTP_HOST:            ${{ secrets.SMTP_HOST }}
-      SMTP_PORT:            ${{ secrets.SMTP_PORT }}
-      EMAIL_ORIGEN:         ${{ secrets.EMAIL_ORIGEN }}
-      EMAIL_PASS:           ${{ secrets.EMAIL_PASS }}
+      BCV_URL:        ${{ secrets.BCV_URL }}
+      TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+      SMTP_HOST:      ${{ secrets.SMTP_HOST }}
+      SMTP_PORT:      ${{ secrets.SMTP_PORT }}
+      EMAIL_ORIGEN:   ${{ secrets.EMAIL_ORIGEN }}
+      EMAIL_PASS:     ${{ secrets.EMAIL_PASS }}
 
     steps:
       - name: Checkout código
         uses: actions/checkout@v4
 
-      - name: Capturar estructura de carpetas
-        run: ls -R . > debug_workspace.txt
+      - name: Preparar Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
 
-      - name: Capturar variables de entorno
-        run: env | sort > debug_env.txt
+      - name: Instalar certificados raíz
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y ca-certificates
+          pip install --upgrade certifi
 
       - name: Instalar dependencias
         run: pip install requests beautifulsoup4 pandas openpyxl
@@ -38,11 +47,3 @@ jobs:
         with:
           name: tasa_bcv_excel
           path: data/tasa_bcv.xlsx
-
-      - name: Subir archivos de debug
-        uses: actions/upload-artifact@v4
-        with:
-          name: debug-files
-          path: |
-            debug_workspace.txt
-            debug_env.txt
