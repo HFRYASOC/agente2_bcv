@@ -6,7 +6,7 @@ concurrency:
 
 on:
   schedule:
-    - cron: '0 13 * * *'   # 13:00 UTC → 09:00 Venezuela
+    - cron: '0 13 * * *'   # 21:00 UTC → 17:00 Venezuela
   workflow_dispatch:
 
 jobs:
